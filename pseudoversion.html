@@ -9,7 +9,15 @@
   <body>
     <h1>invalid pseudo-version: does not match version-control timestamp</h1>
     <h2>TLDR</h2>
-    <p>If you encounter <code>invalid pseudo-version: does not match version-control timestamp</code> when running a <code>go mod</code> command, try truncating the relevant pseudo-version in go.mod and then running <code>go mod tidy</code> <a href="https://golang.org/doc/go1.13#version-validation">as described in the go 1.13 release notes</a>.</p>
+    <p>If you encounter <code>invalid pseudo-version: does not match version-control timestamp</code> when running a <code>go mod</code> command, try truncating the relevant pseudo-version in go.mod and then running <code>go mod tidy</code> <a href="https://golang.org/doc/go1.13#version-validation">as described in the go 1.13 release notes</a>. For example, the following invalid pseudo-version</p>
+    <pre>
+require github.com/docker/docker v1.14.0-0.20190319215453-e7b5f7dbe98c</pre>
+    <p>can be truncated to</p>
+    <pre>
+require github.com/docker/docker e7b5f7dbe98c</pre>
+    <p>which <code>go mod tidy</code> will then resolve to and replace with the correct pseudo-version</p>
+    <pre>
+require github.com/docker/docker v0.7.3-0.20190319215453-e7b5f7dbe98c</pre>
     <h2>The Story</h2>
     <p>I had the pleasure of diving deep into the following go 1.13 error this rainy January afternoon:</p>
     <pre>
@@ -25,7 +33,7 @@ github.com/gravitational/trace v0.0.0-20190626162700-a535a178675f
     <p>Corrupted pseudo-version metadata can be neatly worked around by using a proper version in your go.mod, for example:</p>
     <pre>
 github.com/gravitational/trace v1.0.0</pre>
-    <p>However, you may not be in control of whether your dependency has releases or releases compatible with what go mod expects. In this particular case the trace repo had releases but with <a href="https://github.com/golang/go/issues/32945">non-compatible version tags</a>. This is now fixed in the trace repo.</p>
+    <p>However, you may not be in control of whether your dependency has releases or releases compatible with what go mod expects. In this particular case the trace repo had releases but with <a href="https://github.com/golang/go/issues/32945">non-compatible version tags</a>. <a href="https://github.com/gravitational/trace/releases/tag/v1.1.8">This is now fixed in the trace repo</a>.</p>
     <p>If depending on proper versions is out of scope, the timestamp corruption can be easily fixed. The <a href="https://tip.golang.org/doc/go1.13#version-validation">timestamp validation was introduced in go 1.13</a>. To find the correctly styled UTC date that go wants, clone the dependency repo and run the following command:</p>
     <pre>
 TZ=UTC git show --date=format-local:%Y%m%d%k%M%S --format=%cd &lt;SHA&gt;</pre>
