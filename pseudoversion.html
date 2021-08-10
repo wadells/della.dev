@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>invalid pseudo-version: does not match version-control timestamp</title>
+  </head>
+  <body>
+    <h1>invalid pseudo-version: does not match version-control timestamp</h1>
+    <h2>TLDR</h2>
+    <p>If you encounter <code>invalid pseudo-version: does not match version-control timestamp</code> when running a <code>go mod</code> command, try truncating the relevant pseudo-version in go.mod and then running <code>go mod tidy</code> <a href="https://golang.org/doc/go1.13#version-validation">as described in the go 1.13 release notes</a>.</p>
+    <h2>The Story</h2>
+    <p>I had the pleasure of diving deep into the following go 1.13 error this rainy January afternoon:</p>
+    <pre>
+walt@work:~/git/robotest$ go mod vendor
+go: github.com/gravitational/trace@v0.0.0-20190626162700-a535a178675f: invalid pseudo-version: does not match version-control timestamp (2019-07-26T14:27:06Z)</pre>
+    <p>This error originates from <a href="https://github.com/gravitational/robotest/blob/ced8337028319b266588fd806a8afea9cbfe6c21/go.mod#L18">gravitational/robotest's go.mod</a> which had corrupted timestamp information for <a href="https://github.com/gravitational/trace/commit/a535a178675fb4a11ba74818491754a8c5575dd6">the commit a535a178 in gravitational/trace</a> in a <a href="https://tip.golang.org/cmd/go/#hdr-Pseudo_versions">pseudo-version</a>. To highlight the corruption:</p>
+    <pre>
+github.com/gravitational/trace v0.0.0-20190626162700-a535a178675f
+                                      ^^^^^^^^^^^^^^
+20190626162700 (incorrect timestamp)
+20190726142706 (correct timestamp)
+     ^   ^   ^</pre>
+    <p>Corrupted pseudo-version metadata can be neatly worked around by using a proper version in your go.mod, for example:</p>
+    <pre>
+github.com/gravitational/trace v1.0.0</pre>
+    <p>However, you may not be in control of whether your dependency has releases or releases compatible with what go mod expects. In this particular case the trace repo had releases but with <a href="https://github.com/golang/go/issues/32945">non-compatible version tags</a>. This is now fixed in the trace repo.</p>
+    <p>If depending on proper versions is out of scope, the timestamp corruption can be easily fixed. The <a href="https://tip.golang.org/doc/go1.13#version-validation">timestamp validation was introduced in go 1.13</a>. To find the correctly styled UTC date that go wants, clone the dependency repo and run the following command:</p>
+    <pre>
+TZ=UTC git show --date=format-local:%Y%m%d%k%M%S --format=%cd &lt;SHA&gt;</pre>
+    <p>&lt;SHA&gt; in the above command should be substituted for the last field of the corrupted version in go.mod. For example:</p>
+    <pre>
+github.com/gravitational/trace v0.0.0-20190626162700-a535a178675f</pre>
+    <p>yields the commit SHA a535a178675f which is then substituted and run in a local copy of the trace repo - not the robotest repo:</p>
+    <pre>
+walt@work:~/git/trace$ TZ=UTC git show --date=format-local:%Y%m%d%k%M%S --format=%cd a535a178675f
+20190726142706</pre>
+    <p>I reversed this format from <a href="https://github.com/golang/go/blob/1fb7d5472e8f46faaa034fe6e16ca66a1e7c766f/src/cmd/go/internal/modfetch/pseudo.go#L58">the pseudo.go source code</a> and <code>man strftime</code>.</p>
+    <p>You may then replace the corrupted timestamp in your go.mod:</p>
+    <pre>
+walt@work:~/git/robotest$ git diff
+diff --git a/go.mod b/go.mod
+index ca9bd3d..c3921e1 100644
+--- a/go.mod
++++ b/go.mod
+@@ -15,7 +15,7 @@ require (
+        github.com/go-playground/universal-translator v0.0.0-20170327191703-71201497bace // indirect
+        github.com/googleapis/gax-go v0.0.0-20181202182837-5d9b035a0f09 // indirect
+        github.com/gravitational/configure v0.0.0-20180808141939-c3428bd84c23
+-       github.com/gravitational/trace v0.0.0-20190626162700-a535a178675f
++       github.com/gravitational/trace v0.0.0-20190726142706-a535a178675f
+        github.com/hashicorp/go-version v1.0.0
+        github.com/jmespath/go-jmespath v0.0.0-20180206201540-c2b33e8439af // indirect
+        github.com/jonboulle/clockwork v0.0.0-20180716110948-e7c6d408fd5c // indirect</pre>
+    <p>And everything works again:</p>
+    <pre>
+walt@work:~/git/robotest$ go mod vendor
+go: downloading github.com/gravitational/trace v0.0.0-20190726142706-a535a178675f
+go: extracting github.com/gravitational/trace v0.0.0-20190726142706-a535a178675f</pre>
+    <p>Hopefully this can save you a few minutes or a few hours.</p>
+    <p>Also, <a href="https://github.com/golang/go/commit/e221a75deab7843d5414154000f5bea7abcb60c3">the date format in the error message is fixed in go 1.15+</a>. Open source is awesome!</p>
+  </body>
+</html>
+
