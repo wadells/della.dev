@@ -23,7 +23,7 @@ require github.com/docker/docker v0.7.3-0.20190319215453-e7b5f7dbe98c</pre>
     <pre>
 walt@work:~/git/robotest$ go mod vendor
 go: github.com/gravitational/trace@v0.0.0-20190626162700-a535a178675f: invalid pseudo-version: does not match version-control timestamp (2019-07-26T14:27:06Z)</pre>
-    <p>This error originates from <a href="https://github.com/gravitational/robotest/blob/ced8337028319b266588fd806a8afea9cbfe6c21/go.mod#L18">gravitational/robotest's go.mod</a> which had corrupted timestamp information for <a href="https://github.com/gravitational/trace/commit/a535a178675fb4a11ba74818491754a8c5575dd6">the commit a535a178 in gravitational/trace</a> in a <a href="https://tip.golang.org/cmd/go/#hdr-Pseudo_versions">pseudo-version</a>. To highlight the corruption:</p>
+    <p>This error originates from <a href="https://github.com/gravitational/robotest/blob/ced8337028319b266588fd806a8afea9cbfe6c21/go.mod#L18">gravitational/robotest's go.mod</a> which had corrupted timestamp information for <a href="https://github.com/gravitational/trace/commit/a535a178675fb4a11ba74818491754a8c5575dd6">the commit a535a178 in gravitational/trace</a> in a <a href="https://golang.org/doc/modules/version-numbers#tmp_1">pseudo-version</a>. To highlight the corruption:</p>
     <pre>
 github.com/gravitational/trace v0.0.0-20190626162700-a535a178675f
                                       ^^^^^^^^^^^^^^
